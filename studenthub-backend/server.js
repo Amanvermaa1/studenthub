@@ -7,11 +7,17 @@ const express = require("express");
 const cors = require("cors");
 
 const app = express();
+const {
+  notFound,
+  errorHandler,
+} = require("./src/middleware/errorMiddleware");
 
 // Routes
 const userRoutes = require("./src/routes/userRoutes");
-
 const postRoutes = require("./src/routes/postRoutes");
+const commentRoutes = require("./src/routes/commentRoutes");
+const likeRoutes = require("./src/routes/likeRoutes");
+const bookmarkRoutes = require("./src/routes/bookmarkRoutes");
 // Database
 const pool = require("./src/config/db");
 
@@ -38,7 +44,11 @@ app.get("/", async (req, res) => {
 
 // User Routes
 app.use("/api/users", userRoutes);
-
+app.use("/api/comments", commentRoutes);
+app.use("/api/likes", likeRoutes);
+app.use("/api/bookmarks", bookmarkRoutes);
+app.use(notFound);
+app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
