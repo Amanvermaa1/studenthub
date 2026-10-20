@@ -5,6 +5,7 @@ dotenv.config();
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 
 const app = express();
 const {
@@ -18,12 +19,20 @@ const postRoutes = require("./src/routes/postRoutes");
 const commentRoutes = require("./src/routes/commentRoutes");
 const likeRoutes = require("./src/routes/likeRoutes");
 const bookmarkRoutes = require("./src/routes/bookmarkRoutes");
+const followRoutes = require("./src/routes/followRoutes");
+const notificationRoutes = require("./src/routes/notificationRoutes");
+const attachmentRoutes = require("./src/routes/attachmentRoutes");
 // Database
 const pool = require("./src/config/db");
 
 // Middleware
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+// Attachment/tag/search routes are mounted BEFORE postRoutes so that
+// exact paths like /api/posts/search aren't swallowed by GET /:id.
+app.use("/api", attachmentRoutes);
 app.use("/api/posts", postRoutes);
 
 // Test DB Connection Route
@@ -44,9 +53,11 @@ app.get("/", async (req, res) => {
 
 // User Routes
 app.use("/api/users", userRoutes);
+app.use("/api/users", followRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/likes", likeRoutes);
 app.use("/api/bookmarks", bookmarkRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use(notFound);
 app.use(errorHandler);
 const PORT = process.env.PORT || 5000;

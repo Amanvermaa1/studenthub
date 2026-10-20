@@ -3,7 +3,15 @@ const router = express.Router();
 
 const protect = require("../middleware/authMiddleware");
 
-const upload = require("../middleware/upload");
+const { upload } = require("../middleware/upload");
+
+const { authLimiter } = require("../middleware/rateLimit");
+
+const {
+  registerValidation,
+  loginValidation,
+  validate,
+} = require("../validators/userValidator");
 
 const {
   registerUser,
@@ -16,9 +24,9 @@ const {
   getUserPosts,
 } = require("../controllers/userController");
 
-router.post("/register", registerUser);
+router.post("/register", authLimiter, registerValidation, validate, registerUser);
 
-router.post("/login", loginUser);
+router.post("/login", authLimiter, loginValidation, validate, loginUser);
 
 router.get("/profile", protect, getProfile);
 

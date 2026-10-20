@@ -4,9 +4,8 @@ const toggleBookmark = async (req, res) => {
   try {
     const { postId } = req.params;
 
-    // Check if post exists
     const post = await pool.query(
-      "SELECT * FROM posts WHERE id = $1",
+      "SELECT id FROM posts WHERE id = $1",
       [postId]
     );
 
@@ -16,10 +15,9 @@ const toggleBookmark = async (req, res) => {
       });
     }
 
-    // Check if bookmark already exists
     const existingBookmark = await pool.query(
       `
-      SELECT *
+      SELECT 1
       FROM bookmarks
       WHERE user_id = $1
       AND post_id = $2
@@ -27,9 +25,9 @@ const toggleBookmark = async (req, res) => {
       [req.user.id, postId]
     );
 
-    // Remove bookmark
-    if (existingBookmark.rows.length > 0) {
+    let bookmarked;
 
+    if (existingBookmark.rows.length > 0) {
       await pool.query(
         `
         DELETE FROM bookmarks
@@ -38,23 +36,21 @@ const toggleBookmark = async (req, res) => {
         `,
         [req.user.id, postId]
       );
-
-      return res.status(200).json({
-        message: "Bookmark removed",
-      });
+      bookmarked = false;
+    } else {
+      await pool.query(
+        `
+        INSERT INTO bookmarks(user_id, post_id)
+        VALUES($1, $2)
+        `,
+        [req.user.id, postId]
+      );
+      bookmarked = true;
     }
 
-    // Add bookmark
-    await pool.query(
-      `
-      INSERT INTO bookmarks(user_id, post_id)
-      VALUES($1,$2)
-      `,
-      [req.user.id, postId]
-    );
-
-    res.status(201).json({
-      message: "Post bookmarked",
+    res.status(200).json({
+      bookmarked,
+      message: bookmarked ? "Post bookmarked" : "Bookmark removed",
     });
 
   } catch (error) {
@@ -68,6 +64,9 @@ const toggleBookmark = async (req, res) => {
 
 const getBookmarks = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
     const result = await pool.query(
       `
@@ -76,20 +75,35 @@ const getBookmarks = async (req, res) => {
         posts.title,
         posts.content,
         posts.subject,
+        posts.image_url,
+        posts.user_id,
+        posts.like_count,
+        posts.comment_count,
         posts.created_at,
-        users.name AS author
+        users.name AS author,
+        users.profile_image AS author_avatar
       FROM bookmarks
       INNER JOIN posts
       ON bookmarks.post_id = posts.id
       INNER JOIN users
       ON posts.user_id = users.id
       WHERE bookmarks.user_id = $1
-      ORDER BY bookmarks.created_at DESC;
+      ORDER BY bookmarks.created_at DESC
+      LIMIT $2 OFFSET $3;
       `,
+      [req.user.id, limit, offset]
+    );
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM bookmarks WHERE user_id = $1`,
       [req.user.id]
     );
 
-    res.status(200).json(result.rows);
+    res.status(200).json({
+      posts: result.rows,
+      totalPages: Math.ceil(countResult.rows[0].count / limit),
+      currentPage: page,
+    });
 
   } catch (error) {
     console.error(error);

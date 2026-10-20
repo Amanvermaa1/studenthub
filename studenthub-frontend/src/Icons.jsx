@@ -310,3 +310,78 @@ export const Dots = (p) => (
     <circle cx="18.5" cy="12" r="1.3" />
   </Svg>
 );
+
+export const Fire = (p) => (
+  <Svg {...p}>
+    <path d="M12 3.5 13.7 9l5.5 1.7-5.5 1.7L12 18l-1.7-5.6L4.8 10.7 10.3 9 12 3.5Z" />
+    <path d="M18.5 4v3" />
+    <path d="M17 5.5h3" />
+  </Svg>
+);
+
+export const Award = (p) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 5.5v6" />
+    <path d="M9 12h6" />
+    <path d="M12 18.5V16" />
+  </Svg>
+);
+
+export const UserCheck = (p) => (
+  <Svg {...p}>
+    <circle cx="8" cy="8" r="3.8" />
+    <path d="M4.5 20.5c0-3.7 3.4-6 7.5-6s7.5 2.3 7.5 6" />
+    <path d="m15.5 13.5 2.5 2.5 4.5-5" />
+  </Svg>
+);
+
+export const Sparkles = (p) => (
+  <Svg {...p}>
+    <path d="M12 3v1m0 16v1m9-9h-1m-16 0h-1m12.7-10.7l-.7.7m-10.6 0l-.7.7m10.6 10.6l-.7-.7m-10.6 0l-.7-.7" />
+    <path d="M18 7v1m0 8v1m-3-3h1m-6 0h1m13.5-3.5l-.7.7m-10.6 0l-.7.7m10.6 10.6l-.7-.7m-10.6 0l-.7-.7" />
+  </Svg>
+);
+
+export const Zap = (p) => (
+  <Svg {...p}>
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </Svg>
+);
+
+export const FileText = (p) => (
+  <Svg {...p}>
+    <path d="M14 3.5H7.5A1.5 1.5 0 0 0 6 5v14a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 18 19V8l-4-4.5Z" />
+    <path d="M9 13h6" />
+    <path d="M9 16.5h4" />
+  </Svg>
+);
+
+export const Edit = (p) => (
+  <Svg {...p}>
+    <path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3Z" />
+    <path d="m14.5 7.5 3 3" />
+  </Svg>
+);
+
+export const Tag = (p) => (
+  <Svg {...p}>
+    <path d="M6.5 4h11a1 1 0 0 1 1 1v15.2l-6.5-4-6.5 4V5a1 1 0 0 1 1-1Z" />
+  </Svg>
+);
+
+export const Bell = (p) => (
+  <Svg {...p}>
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9Z" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </Svg>
+);
+
+export const UserPlus = (p) => (
+  <Svg {...p}>
+    <circle cx="8" cy="8" r="3.8" />
+    <path d="M4.5 20.5c0-3.7 3.4-6 7.5-6s7.5 2.3 7.5 6" />
+    <path d="M18 14.5v4" />
+    <path d="M16 16.5h4" />
+  </Svg>
+);

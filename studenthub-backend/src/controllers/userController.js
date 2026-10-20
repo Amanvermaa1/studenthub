@@ -170,10 +170,11 @@ const changePassword = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
 
-    const { email, password } = req.body;
+    const password = req.body.password;
+    const email = String(req.body.email || "").trim().toLowerCase();
 
     const result = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
+      "SELECT * FROM users WHERE lower(email) = $1",
       [email]
     );
 
@@ -185,15 +186,10 @@ const loginUser = async (req, res) => {
 
     const user = result.rows[0];
 
-    console.log("Entered Password:", password);
-    console.log("Stored Hash:", user.password);
-
     const isMatch = await bcrypt.compare(
       password,
       user.password
     );
-
-    console.log("Password Match:", isMatch);
 
     if (!isMatch) {
       return res.status(400).json({
@@ -226,7 +222,9 @@ const loginUser = async (req, res) => {
 const registerUser = async (req, res) => {
   try {
 
-    const { name, email, password } = req.body;
+    const name = req.body.name;
+    const password = req.body.password;
+    const email = String(req.body.email || "").trim().toLowerCase();
 
     // Validation
     if (!name || !email || !password) {
@@ -238,7 +236,7 @@ const registerUser = async (req, res) => {
     // Check Existing User
 
     const userExists = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
+      "SELECT * FROM users WHERE lower(email) = $1",
       [email]
     );
 

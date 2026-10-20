@@ -5,9 +5,8 @@ const toggleLike = async (req, res) => {
 
     const { postId } = req.params;
 
-    // Check if post exists
     const post = await pool.query(
-      "SELECT * FROM posts WHERE id = $1",
+      "SELECT id FROM posts WHERE id = $1",
       [postId]
     );
 
@@ -17,10 +16,9 @@ const toggleLike = async (req, res) => {
       });
     }
 
-    // Check if already liked
     const existingLike = await pool.query(
       `
-      SELECT *
+      SELECT 1
       FROM likes
       WHERE user_id = $1
       AND post_id = $2
@@ -28,9 +26,9 @@ const toggleLike = async (req, res) => {
       [req.user.id, postId]
     );
 
-    // Unlike
-    if (existingLike.rows.length > 0) {
+    let liked;
 
+    if (existingLike.rows.length > 0) {
       await pool.query(
         `
         DELETE FROM likes
@@ -39,24 +37,39 @@ const toggleLike = async (req, res) => {
         `,
         [req.user.id, postId]
       );
+      liked = false;
+    } else {
+      await pool.query(
+        `
+        INSERT INTO likes(user_id, post_id)
+        VALUES($1, $2)
+        `,
+        [req.user.id, postId]
+      );
+      liked = true;
 
-      return res.status(200).json({
-        message: "Post unliked"
-      });
-
+      // Create notification for post owner (if not self-like)
+      const postOwner = await pool.query(`SELECT user_id FROM posts WHERE id = $1`, [postId]);
+      if (postOwner.rows.length > 0 && postOwner.rows[0].user_id !== req.user.id) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, actor_id, type, post_id) VALUES ($1, $2, 'like', $3)`,
+          [postOwner.rows[0].user_id, req.user.id, postId]
+        );
+      }
     }
 
-    // Like
-    await pool.query(
+    const countResult = await pool.query(
       `
-      INSERT INTO likes(user_id, post_id)
-      VALUES($1, $2)
+      SELECT COUNT(1) AS total
+      FROM likes
+      WHERE post_id = $1
       `,
-      [req.user.id, postId]
+      [postId]
     );
 
-    res.status(201).json({
-      message: "Post liked"
+    res.status(200).json({
+      liked,
+      totalLikes: Number(countResult.rows[0].total),
     });
 
   } catch (error) {

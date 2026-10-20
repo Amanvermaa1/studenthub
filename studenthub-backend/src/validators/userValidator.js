@@ -37,6 +37,10 @@ const validate = (req, res, next) => {
   if (!errors.isEmpty()) {
 
     return res.status(400).json({
+      message: errors
+        .array()
+        .map((error) => error.msg)
+        .join(" "),
       errors: errors.array(),
     });
 
