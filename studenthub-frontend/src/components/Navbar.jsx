@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, Bell, Bookmark, Close, Document, Home, LogoMark, Logout, Menu, Plus, User } from "../Icons.jsx";
 import { initials } from "../components/Avatar.jsx";
 import { API } from "../api/client.js";
@@ -12,6 +12,11 @@ function Navbar({ token, user, logout }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // The landing page renders a full-page dark sky behind the header, so the
+  // navbar switches to a transparent / glass overlay variant there.
+  const isOverlay = location.pathname === "/";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 6);
@@ -20,13 +25,28 @@ function Navbar({ token, user, logout }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Close the mobile drawer whenever the route changes.
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
+
+  // Lock body scroll while the mobile drawer is open.
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   const go = (path) => {
     navigate(path);
     setOpen(false);
   };
 
   return (
-    <header className={`navbar${scrolled ? " scrolled" : ""}`}>
+    <header
+      className={`navbar${scrolled ? " scrolled" : ""}${isOverlay ? " navbar-overlay" : ""}`}
+    >
       <NavLink to="/" className="brand" onClick={() => setOpen(false)} end>
         <span className="brand-mark">
           <LogoMark size={19} />
@@ -81,7 +101,11 @@ function Navbar({ token, user, logout }) {
           </>
         ) : (
           <>
-            <NavLink to="/login" className="nav-link" onClick={() => setOpen(false)}>
+            <NavLink
+              to="/login"
+              className="nav-link nav-link-glass"
+              onClick={() => setOpen(false)}
+            >
               Sign in
             </NavLink>
 

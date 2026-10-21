@@ -25,17 +25,65 @@ const attachmentRoutes = require("./src/routes/attachmentRoutes");
 // Database
 const pool = require("./src/config/db");
 
-// Middleware
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
+/* ------------------------------------------------------------
+   Production middleware
+   ------------------------------------------------------------ */
 
-// Attachment/tag/search routes are mounted BEFORE postRoutes so that
-// exact paths like /api/posts/search aren't swallowed by GET /:id.
-app.use("/api", attachmentRoutes);
-app.use("/api/posts", postRoutes);
+// Render (and most PaaS) terminate TLS at their proxy. Trusting the proxy
+// makes express-rate-limit see the real client IP instead of the proxy's.
+app.set("trust proxy", 1);
 
-// Test DB Connection Route
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+
+// CORS allow-list. Set CLIENT_ORIGIN to a comma separated list of allowed
+// origins in production, e.g. "https://studenthub-gray.vercel.app".
+const allowedOrigins = (process.env.CLIENT_ORIGIN || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // No origin = same-origin / curl / mobile app -> allow.
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.length === 0) return callback(null, true);
+      if (allowedOrigins.includes("*")) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+
+/* ------------------------------------------------------------
+   Health check (used by Render + uptime monitors)
+   ------------------------------------------------------------ */
+
+app.get("/health", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT NOW()");
+    res.status(200).json({
+      status: "ok",
+      service: "studenthub-api",
+      database: "connected",
+      time: result.rows[0].now,
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: "degraded",
+      service: "studenthub-api",
+      database: "unreachable",
+    });
+  }
+});
+
+// Root route (kept for backwards compatibility with the original API)
 app.get("/", async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW()");
@@ -51,6 +99,15 @@ app.get("/", async (req, res) => {
   }
 });
 
+/* ------------------------------------------------------------
+   API routes
+   ------------------------------------------------------------ */
+
+// Attachment/tag/search routes are mounted BEFORE postRoutes so that
+// exact paths like /api/posts/search aren't swallowed by GET /:id.
+app.use("/api", attachmentRoutes);
+app.use("/api/posts", postRoutes);
+
 // User Routes
 app.use("/api/users", userRoutes);
 app.use("/api/users", followRoutes);
@@ -58,10 +115,39 @@ app.use("/api/comments", commentRoutes);
 app.use("/api/likes", likeRoutes);
 app.use("/api/bookmarks", bookmarkRoutes);
 app.use("/api/notifications", notificationRoutes);
+
 app.use(notFound);
 app.use(errorHandler);
+
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  if (allowedOrigins.length) {
+    console.log(`CORS allowed origins: ${allowedOrigins.join(", ")}`);
+  }
 });
+
+/* ------------------------------------------------------------
+   Graceful shutdown (Render sends SIGTERM on deploy/restart)
+   ------------------------------------------------------------ */
+
+const shutdown = (signal) => {
+  console.log(`\n${signal} received — shutting down gracefully...`);
+  server.close(async () => {
+    try {
+      await pool.end();
+    } catch (error) {
+      console.error("Pool close error:", error.message);
+    }
+    process.exit(0);
+  });
+
+  // Force exit if connections hang.
+  setTimeout(() => process.exit(1), 10000).unref();
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+module.exports = app;

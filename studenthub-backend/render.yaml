@@ -1,0 +1,68 @@
+# Render blueprint for StudentHub API
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Usage:
+#   Render Dashboard -> New -> Blueprint -> select this repo
+#   (Render picks up render.yaml automatically and creates both services)
+
+databases:
+  - name: studenthub-db
+    databaseName: studenthub
+    user: studenthub
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: studenthub-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: studenthub-backend
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    # Runs on every deploy before the new version goes live.
+    preDeployCommand: npm run db:migrate
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      # --- database (wired automatically from the Render Postgres) ---
+      - key: DB_HOST
+        fromDatabase:
+          name: studenthub-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: studenthub-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: studenthub-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: studenthub-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: studenthub-db
+          property: password
+      - key: DB_SSL
+        value: "false"
+      # --- secrets: set these in the Render dashboard ---
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # --- CORS: comma separated list of allowed frontends ---
+      - key: CLIENT_ORIGIN
+        value: "https://studenthub-gray.vercel.app"

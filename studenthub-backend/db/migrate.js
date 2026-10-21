@@ -1,15 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
-const { Pool } = require("pg");
-
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: String(process.env.DB_PASSWORD),
-  port: Number(process.env.DB_PORT),
-});
+// Reuse the shared pool so SSL / pool settings match the running server.
+const pool = require("../src/config/db");
 
 async function printStatus() {
   const tables = await pool.query(

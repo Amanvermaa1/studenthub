@@ -20,6 +20,7 @@ import PublicProfile from "./components/PublicProfile.jsx";
 import { Protected, Guest } from "./components/guards.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import SearchResults from "./pages/SearchResults.jsx";
+import StaticPage from "./pages/StaticPage.jsx";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -617,6 +618,15 @@ function App() {
             />
           }
         />
+
+        {/* Static pages: About, Privacy, Terms, Guidelines, Help, Contact */}
+        <Route path="/about" element={<StaticPage slug="about" />} />
+        <Route path="/privacy" element={<StaticPage slug="privacy" />} />
+        <Route path="/terms" element={<StaticPage slug="terms" />} />
+        <Route path="/guidelines" element={<StaticPage slug="guidelines" />} />
+        <Route path="/help" element={<StaticPage slug="help" />} />
+        <Route path="/contact" element={<StaticPage slug="contact" />} />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
 

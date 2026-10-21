@@ -248,11 +248,18 @@ export const Image = (p) => (
   </Svg>
 );
 
-export const Sparkle = (p) => (
+export const Sparkles = (p) => (
   <Svg {...p}>
     <path d="M12 3.5 13.7 9l5.5 1.7-5.5 1.7L12 18l-1.7-5.6L4.8 10.7 10.3 9 12 3.5Z" />
     <path d="M18.5 4v3" />
     <path d="M17 5.5h3" />
+    <path d="M5 14v2.5M3.75 15.25h2.5" />
+  </Svg>
+);
+
+export const Zap = (p) => (
+  <Svg {...p}>
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
   </Svg>
 );
 
@@ -333,19 +340,6 @@ export const UserCheck = (p) => (
     <circle cx="8" cy="8" r="3.8" />
     <path d="M4.5 20.5c0-3.7 3.4-6 7.5-6s7.5 2.3 7.5 6" />
     <path d="m15.5 13.5 2.5 2.5 4.5-5" />
-  </Svg>
-);
-
-export const Sparkles = (p) => (
-  <Svg {...p}>
-    <path d="M12 3v1m0 16v1m9-9h-1m-16 0h-1m12.7-10.7l-.7.7m-10.6 0l-.7.7m10.6 10.6l-.7-.7m-10.6 0l-.7-.7" />
-    <path d="M18 7v1m0 8v1m-3-3h1m-6 0h1m13.5-3.5l-.7.7m-10.6 0l-.7.7m10.6 10.6l-.7-.7m-10.6 0l-.7-.7" />
-  </Svg>
-);
-
-export const Zap = (p) => (
-  <Svg {...p}>
-    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
   </Svg>
 );
 

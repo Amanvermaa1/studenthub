@@ -1,4 +1,17 @@
-export const API = "http://localhost:5000/api";
+/* =====================================================
+   API BASE URL
+   ---------------------------------------------------------
+   - Production (Vercel): set `VITE_API_URL` in the project's
+     Environment Variables, e.g.
+       https://studenthub-api.onrender.com/api
+   - Local dev: falls back to the local Express server.
+   ===================================================== */
+
+const DEV_API = "http://localhost:5000/api";
+
+export const API = (
+  import.meta.env.VITE_API_URL || DEV_API
+).replace(/\/+$/, "");
 
 export async function request(path, { method = "GET", token, body, headers = {}, ...rest } = {}) {
   const fetchHeaders = {

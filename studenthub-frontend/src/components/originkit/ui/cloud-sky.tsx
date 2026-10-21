@@ -237,6 +237,16 @@ interface Props {
     clouds?: Clouds
     sun?: Sun
     pointer?: Pointer
+    /**
+     * Internal render resolution multiplier. The canvas is always stretched to
+     * fill its container by CSS, so rendering at < 1 draws far fewer pixels
+     * (huge win for this fragment-heavy shader) at a tiny quality cost.
+     */
+    resolutionScale?: number
+    /** Hard cap on devicePixelRatio used for the backing store. */
+    maxDpr?: number
+    /** Target frames per second for the animation loop. */
+    fps?: number
 }
 
 export default function CloudSky(props: Props) {
@@ -253,6 +263,9 @@ export default function CloudSky(props: Props) {
         pointer,
         width,
         height,
+        resolutionScale = 1,
+        maxDpr = 1,
+        fps = 60,
     } = props
 
     const clouds_ = { ...CLOUD_DEFAULTS, ...(clouds || {}) }
@@ -283,6 +296,26 @@ export default function CloudSky(props: Props) {
     }
 
     const ptrRef = useRef({ x: 0, y: 0, inside: false })
+
+    // Performance knobs are read through a ref so the WebGL context is created
+    // once and never torn down on a re-render.
+    const perfRef = useRef({ resolutionScale, maxDpr, fps })
+    perfRef.current = { resolutionScale, maxDpr, fps }
+
+    // Colours are parsed once per prop change instead of once per frame.
+    const colorRef = useRef<{
+        key: string
+        zen: RGBA
+        hor: RGBA
+        cld: RGBA
+        glow: RGBA
+    }>({
+        key: "",
+        zen: [0.369, 0.576, 0.824, 1],
+        hor: [0.706, 0.824, 0.941, 1],
+        cld: [1, 1, 1, 1],
+        glow: [0.91, 0.953, 1, 0.9],
+    })
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -322,6 +355,7 @@ export default function CloudSky(props: Props) {
 
         let raf = 0
         let last = performance.now()
+        let lastDraw = 0
 
         let nearX = 0
         let farX = 0
@@ -330,6 +364,23 @@ export default function CloudSky(props: Props) {
         let leanY = 0
 
         const render = (now: number) => {
+            raf = requestAnimationFrame(render)
+
+            // Skip work while the tab is in the background.
+            if (typeof document !== "undefined" && document.hidden) {
+                last = now
+                return
+            }
+
+            const perf = perfRef.current
+            const frameInterval = 1000 / Math.max(1, perf.fps)
+            const scale = Math.min(1, Math.max(0.15, perf.resolutionScale))
+            const dprCap = Math.min(MAX_DPR, Math.max(0.5, perf.maxDpr))
+
+            // Throttle to the requested frame rate.
+            if (now - lastDraw < frameInterval) return
+            lastDraw = now
+
             const dt = Math.min(0.05, (now - last) / 1000)
             last = now
             const v = vRef.current
@@ -345,21 +396,32 @@ export default function CloudSky(props: Props) {
             farX = (farX - FAR_DRIFT * rate * dt) % 1000
             cirrusX = (cirrusX - CIRRUS_DRIFT * rate * dt) % 1000
 
-            const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR)
-            const cw = sizeRef.current.w || canvas.clientWidth || 1200
-            const ch = sizeRef.current.h || canvas.clientHeight || 800
-            const bw = Math.max(1, Math.round(cw * dpr))
-            const bh = Math.max(1, Math.round(ch * dpr))
+            const dpr = Math.min(window.devicePixelRatio || 1, dprCap)
+            const cw = sizeRef.current.w || canvas.clientWidth || window.innerWidth || 1200
+            const ch = sizeRef.current.h || canvas.clientHeight || window.innerHeight || 800
+            const bw = Math.max(1, Math.round(cw * dpr * scale))
+            const bh = Math.max(1, Math.round(ch * dpr * scale))
             if (canvas.width !== bw || canvas.height !== bh) {
                 canvas.width = bw
                 canvas.height = bh
             }
             gl.viewport(0, 0, bw, bh)
 
-            const zen = parseColor(v.zenith as string, [0.369, 0.576, 0.824, 1])
-            const hor = parseColor(v.horizon as string, [0.706, 0.824, 0.941, 1])
-            const cld = parseColor(v.cloud as string, [1, 1, 1, 1])
-            const glow = parseColor(v.glow as string, [0.91, 0.953, 1, 0.9])
+            // Parse the colour strings only when they actually change.
+            const colorKey = `${v.zenith}|${v.horizon}|${v.cloud}|${v.glow}`
+            if (colorRef.current.key !== colorKey) {
+                colorRef.current = {
+                    key: colorKey,
+                    zen: parseColor(v.zenith as string, [0.369, 0.576, 0.824, 1]),
+                    hor: parseColor(v.horizon as string, [0.706, 0.824, 0.941, 1]),
+                    cld: parseColor(v.cloud as string, [1, 1, 1, 1]),
+                    glow: parseColor(v.glow as string, [0.91, 0.953, 1, 0.9]),
+                }
+            }
+            const zen = colorRef.current.zen
+            const hor = colorRef.current.hor
+            const cld = colorRef.current.cld
+            const glow = colorRef.current.glow
 
             gl.uniform2f(u("uRes"), bw, bh)
             gl.uniform1f(u("uNearX"), nearX)
@@ -378,24 +440,30 @@ export default function CloudSky(props: Props) {
             gl.uniform4f(u("uGlow"), glow[0], glow[1], glow[2], glow[3])
 
             gl.drawArrays(gl.TRIANGLES, 0, 3)
-            raf = requestAnimationFrame(render)
         }
 
-        // Track pointer on window so it works even when content overlays the canvas
+        // Track pointer on window so it works even when content overlays the canvas.
+        // The bounding rect is cached — measuring it on every pointermove forces a
+        // synchronous layout and was a major source of jank.
+        let rect = canvas.getBoundingClientRect()
+        const refreshRect = () => {
+            rect = canvas.getBoundingClientRect()
+        }
         const track = (e: PointerEvent) => {
-            const r = canvas.getBoundingClientRect()
-            if (r.width <= 0 || r.height <= 0) return
-            ptrRef.current.x = ((e.clientX - r.left) / r.width) * 2 - 1
-            ptrRef.current.y = 1 - ((e.clientY - r.top) / r.height) * 2
+            if (rect.width <= 0 || rect.height <= 0) return
+            ptrRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
+            ptrRef.current.y = 1 - ((e.clientY - rect.top) / rect.height) * 2
             ptrRef.current.inside = true
         }
         const onLeave = () => {
             ptrRef.current.inside = false
         }
 
-        window.addEventListener("pointermove", track)
-        window.addEventListener("pointerenter", track)
+        window.addEventListener("pointermove", track, { passive: true })
+        window.addEventListener("pointerenter", track, { passive: true })
         window.addEventListener("pointerleave", onLeave)
+        window.addEventListener("resize", refreshRect, { passive: true })
+        window.addEventListener("scroll", refreshRect, { passive: true })
 
         raf = requestAnimationFrame(render)
 
@@ -404,6 +472,8 @@ export default function CloudSky(props: Props) {
             window.removeEventListener("pointermove", track)
             window.removeEventListener("pointerenter", track)
             window.removeEventListener("pointerleave", onLeave)
+            window.removeEventListener("resize", refreshRect)
+            window.removeEventListener("scroll", refreshRect)
         }
     }, [])
 
@@ -414,8 +484,8 @@ export default function CloudSky(props: Props) {
                 overflow: "hidden",
                 background,
                 isolation: "isolate",
-                minWidth: 1200,
-                minHeight: 800,
+                minWidth: 0,
+                minHeight: 0,
                 width: typeof width === "number" && width > 0 ? width : "100%",
                 height: typeof height === "number" && height > 0 ? height : "100%",
                 ...style,
