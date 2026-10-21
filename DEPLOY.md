@@ -19,7 +19,8 @@ F:\studenthub
 web service.
 
 1. Push the repo to GitHub first (the blueprint is read from the repo).
-2. Render Dashboard → **New** → **Blueprint** → select `Amanvermaa1/studenthub-backend`.
+   Repo: `https://github.com/Amanvermaa1/studenthub` (default branch: `master`)
+2. Render Dashboard → **New** → **Blueprint** → select `Amanvermaa1/studenthub`.
 3. Render creates `studenthub-db` (Postgres 16) and `studenthub-api` (Node).
 4. Open the **studenthub-api** service → **Environment** and fill in the secrets
    that `sync: false` left blank:
@@ -42,7 +43,7 @@ web service.
 
 ### Option B: manual (what you were doing on the "New" screen)
 
-1. Render → **New** → **Web Service** → connect `Amanvermaa1/studenthub-backend`.
+1. Render → **New** → **Web Service** → connect `Amanvermaa1/studenthub`.
 2. Settings:
    | Field | Value |
    |---|---|

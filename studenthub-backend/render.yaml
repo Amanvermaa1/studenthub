@@ -18,7 +18,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    branch: main
+    branch: master
     rootDir: studenthub-backend
     buildCommand: npm ci --omit=dev
     startCommand: npm start
