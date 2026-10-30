@@ -1,16 +1,18 @@
 /* =====================================================
    API BASE URL
    ---------------------------------------------------------
-   - Production (Vercel): set `VITE_API_URL` in the project's
-     Environment Variables, e.g.
-       https://studenthub-api.onrender.com/api
+   - Production (Vercel): defaults to the deployed Render API.
+     `VITE_API_URL` can override it for another environment.
    - Local dev: falls back to the local Express server.
    ===================================================== */
 
 const DEV_API = "http://localhost:5000/api";
+const DEFAULT_API = import.meta.env.PROD
+  ? "https://studenthub-api-x8iq.onrender.com/api"
+  : DEV_API;
 
 export const API = (
-  import.meta.env.VITE_API_URL || DEV_API
+  import.meta.env.VITE_API_URL || DEFAULT_API
 ).replace(/\/+$/, "");
 
 export async function request(path, { method = "GET", token, body, headers = {}, ...rest } = {}) {

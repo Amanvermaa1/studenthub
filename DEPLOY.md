@@ -87,11 +87,14 @@ on the configured free plan.
 The project already exists: https://studenthub-gray.vercel.app/
 
 1. Vercel → your project → **Settings** → **Environment Variables**
-2. Add (for **Production**, **Preview** and **Development**):
+2. Optionally add (for **Production**, **Preview** and **Development**) to
+   override the frontend's production default:
    ```
    VITE_API_URL = https://studenthub-api-x8iq.onrender.com/api
    ```
-3. **Deployments** → **Redeploy** (env vars are baked in at build time).
+3. **Deployments** → **Redeploy** if you changed the environment variable
+   (Vite environment variables are baked in at build time). The production
+   default is already set to the Render API in `src/api/client.js`.
 4. `studenthub-frontend/vercel.json` is included — it sets the SPA rewrite so
    deep links like `/privacy` and `/post/12` work on refresh.
 
