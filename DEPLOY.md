@@ -9,6 +9,11 @@ F:\studenthub
 └─ TODO.md
 ```
 
+The Render service and database above are already provisioned manually and are
+not managed by a Blueprint. Do not deploy the Blueprint into the same Render
+workspace unless you first choose how to adopt the existing resources; otherwise
+you may create duplicates. The Blueprint steps below are for a fresh workspace.
+
 ---
 
 ## 1. Backend → Render
