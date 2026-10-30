@@ -20,7 +20,9 @@ web service.
 
 1. Push the repo to GitHub first (the blueprint is read from the repo).
    Repo: `https://github.com/Amanvermaa1/studenthub` (default branch: `master`)
-2. Render Dashboard → **New** → **Blueprint** → select `Amanvermaa1/studenthub`.
+2. Render Dashboard → **New** → **Blueprint** → select
+   `Amanvermaa1/studenthub`. Set **Blueprint Path** to
+   `studenthub-backend/render.yaml` (the file is not at the repository root).
 3. Render creates `studenthub-db` (Postgres 16) and `studenthub-api` (Node).
 4. Open the **studenthub-api** service → **Environment** and fill in the secrets
    that `sync: false` left blank:
@@ -32,14 +34,9 @@ web service.
 5. Deploy. Check `https://studenthub-api.onrender.com/health` → should return
    `{"status":"ok", ...}`.
 
-> **Note:** `preDeployCommand: npm run db:migrate` is a **paid-plan** feature on
-> Render. On the free tier run migrations once from a local shell:
-> ```bash
-> cd studenthub-backend
-> $env:DB_HOST="<render-db-host>"; $env:DB_PORT="5432"; $env:DB_NAME="studenthub"
-> $env:DB_USER="studenthub"; $env:DB_PASSWORD="<db-password>"; $env:DB_SSL="true"
-> npm run db:migrate
-> ```
+The service start command applies the idempotent schema and migrations before
+starting the API. This avoids Render's paid-only pre-deploy command requirement
+on the configured free plan.
 
 ### Option B: manual (what you were doing on the "New" screen)
 
@@ -50,7 +47,7 @@ web service.
    | Root Directory | `studenthub-backend` |
    | Runtime | Node |
    | Build Command | `npm ci --omit=dev` |
-   | Start Command | `npm start` |
+   | Start Command | `npm run db:migrate && npm start` |
    | Health Check Path | `/health` |
 3. **New** → **Postgres** → name `studenthub-db`, plan Free, region same as the
    web service.
@@ -68,9 +65,10 @@ web service.
    CLOUDINARY_API_SECRET = ...
    CLIENT_ORIGIN = https://studenthub-gray.vercel.app
    ```
-5. Deploy, then run the migrations once (see Option A note).
+5. Deploy. Migrations run automatically when the service starts.
 
 ### Free-tier gotchas
+
 - Free web services **sleep after 15 min idle** → the first request can take
   ~50 s ("cold start"). Frontend should show a friendly loading state.
 - Free Postgres **expires after 30 days**. For something you want to keep, use
@@ -93,6 +91,7 @@ The project already exists: https://studenthub-gray.vercel.app/
    deep links like `/privacy` and `/post/12` work on refresh.
 
 ### Verify
+
 - `https://studenthub-gray.vercel.app/` → landing page
 - `https://studenthub-gray.vercel.app/privacy` → privacy page (SPA rewrite)
 - DevTools → Network → the `fetch` calls should go to `studenthub-api.onrender.com`
@@ -114,6 +113,7 @@ npm run dev            # vite on :5173
 ```
 
 `studenthub-frontend/.env.local`:
+
 ```
 VITE_API_URL=http://localhost:5000/api
 ```
@@ -124,18 +124,18 @@ VITE_API_URL=http://localhost:5000/api
 
 ### Backend (`studenthub-backend/.env`)
 
-| Variable | Required | Description |
-|---|---|---|
-| `PORT` | no (5000) | HTTP port — Render sets this for you |
-| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | yes | Postgres connection |
-| `DB_SSL` | no (`false`) | Set `true` for public managed Postgres |
-| `DB_POOL_MAX` | no (10) | Max pooled connections |
-| `JWT_SECRET` | yes | Signing secret for auth tokens |
-| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | yes | Attachment uploads |
-| `CLIENT_ORIGIN` | no (`*`) | Comma separated CORS allow-list |
+| Variable                                                                 | Required     | Description                            |
+| ------------------------------------------------------------------------ | ------------ | -------------------------------------- |
+| `PORT`                                                                   | no (5000)    | HTTP port — Render sets this for you   |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD`            | yes          | Postgres connection                    |
+| `DB_SSL`                                                                 | no (`false`) | Set `true` for public managed Postgres |
+| `DB_POOL_MAX`                                                            | no (10)      | Max pooled connections                 |
+| `JWT_SECRET`                                                             | yes          | Signing secret for auth tokens         |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | yes          | Attachment uploads                     |
+| `CLIENT_ORIGIN`                                                          | no (`*`)     | Comma separated CORS allow-list        |
 
 ### Frontend (`studenthub-frontend/.env.local`)
 
-| Variable | Required | Description |
-|---|---|---|
+| Variable       | Required    | Description                        |
+| -------------- | ----------- | ---------------------------------- |
 | `VITE_API_URL` | yes in prod | Full API base URL ending in `/api` |
